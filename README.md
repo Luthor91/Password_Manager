@@ -14,7 +14,7 @@ Avant d'utiliser cet utilitaire, assurez-vous d'avoir installé les outils suiva
   1. **Cloner le dépôt Git**
 
    ```bash
-        git clone https://github.com/votre-utilisateur/Password_Manager.git
+        git clone https://github.com/Luthor91/Password_Manager.git
         cd Password_Manager
    ```
 
@@ -52,9 +52,3 @@ Assurez-vous que toutes les dépendances nécessaires sont correctement install�
   ```python
     python mdp.py get <nom_du_service>
   ```
-
-
-
-- **Licence** : Indique la licence sous laquelle le projet est distribué.
-
-Ce modèle de `README.md` devrait vous fournir une base solide pour documenter votre utilitaire de gestion de mots de passe en ligne de commande. Assurez-vous de personnaliser les sections `<placeholder>` avec les informations spécifiques à votre projet avant de publier ou de partager votre documentation.
