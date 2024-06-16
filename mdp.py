@@ -12,13 +12,16 @@ import keyring
 def init_db():
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS passwords (
-                    service TEXT PRIMARY KEY,
-                    password TEXT
-                )''')
-    c.execute('''CREATE TABLE IF NOT EXISTS master_password (
+    c.execute('''CREATE TABLE IF NOT EXISTS services (
                     id INTEGER PRIMARY KEY,
-                    password_hash TEXT
+                    service TEXT UNIQUE
+                )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS accounts (
+                    id INTEGER PRIMARY KEY,
+                    service_id INTEGER,
+                    username TEXT,
+                    password TEXT,
+                    FOREIGN KEY (service_id) REFERENCES services(id)
                 )''')
     conn.commit()
     conn.close()
@@ -46,26 +49,81 @@ def decrypt_password(key, encrypted_password):
     fernet = Fernet(key)
     return fernet.decrypt(encrypted_password).decode('utf-8')
 
-# Fonction pour ajouter un mot de passe de service
-def add_password(service, password):
-    key = generate_key(master_password)
-    encrypted_password = encrypt_password(key, password)
+# Fonction pour ajouter un compte pour un service avec identifiant
+def add_account(service, username):
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO passwords (service, password) VALUES (?, ?)", (service, encrypted_password))
+    
+    # Vérifier si le service existe déjà
+    c.execute("SELECT id FROM services WHERE service = ?", (service,))
+    service_row = c.fetchone()
+    if not service_row:
+        c.execute("INSERT INTO services (service) VALUES (?)", (service,))
+        service_id = c.lastrowid
+    else:
+        service_id = service_row[0]
+
+    # Demander le mot de passe pour l'identifiant spécifique
+    password = getpass.getpass(f"Entrez le mot de passe pour '{username}' sur '{service}': ")
+
+    # Ajouter le compte dans la table des comptes
+    c.execute("INSERT INTO accounts (service_id, username, password) VALUES (?, ?, ?)", (service_id, username, password))
+    
     conn.commit()
     conn.close()
 
-# Fonction pour récupérer un mot de passe de service
-def get_password(service):
-    key = generate_key(master_password)
+# Fonction pour récupérer les identifiants associés à un service
+def get_accounts(service):
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
-    c.execute("SELECT password FROM passwords WHERE service = ?", (service,))
+    
+    # Récupérer l'ID du service
+    c.execute("SELECT id FROM services WHERE service = ?", (service,))
+    service_row = c.fetchone()
+    if not service_row:
+        print(f"Aucun service '{service}' trouvé.")
+        return
+    
+    service_id = service_row[0]
+    
+    # Récupérer les comptes pour ce service
+    c.execute("SELECT username FROM accounts WHERE service_id = ?", (service_id,))
+    accounts = c.fetchall()
+    
+    conn.close()
+    
+    if not accounts:
+        print(f"Aucun compte trouvé pour le service '{service}'.")
+    else:
+        print(f"Identifiants disponibles pour le service '{service}':")
+        for account in accounts:
+            print(account[0])
+
+# Fonction pour récupérer un mot de passe pour un compte spécifique
+def get_password(service, username=None):
+    conn = sqlite3.connect('passwords.db')
+    c = conn.cursor()
+    
+    # Récupérer l'ID du service
+    c.execute("SELECT id FROM services WHERE service = ?", (service,))
+    service_row = c.fetchone()
+    if not service_row:
+        print(f"Aucun service '{service}' trouvé.")
+        return
+    
+    service_id = service_row[0]
+    
+    # Récupérer le mot de passe pour le compte spécifique ou le premier compte si aucun identifiant spécifié
+    if username:
+        c.execute("SELECT password FROM accounts WHERE service_id = ? AND username = ?", (service_id, username))
+    else:
+        c.execute("SELECT password FROM accounts WHERE service_id = ?", (service_id,))
+    
     result = c.fetchone()
     conn.close()
+    
     if result:
-        return decrypt_password(key, result[0])
+        return result[0]
     else:
         return None
 
@@ -76,47 +134,22 @@ init_db()
 parser = argparse.ArgumentParser(description='Gestionnaire de mots de passe.')
 parser.add_argument('action', choices=['add', 'get'], help='Action à effectuer: add pour ajouter, get pour récupérer un mot de passe.')
 parser.add_argument('service', help='Nom du service associé au mot de passe.')
+parser.add_argument('username', nargs='?', help='Identifiant associé au compte (optionnel, pour la récupération).')
 args = parser.parse_args()
-
-# Vérifier si un mot de passe maître est déjà stocké dans keyring pour cette session
-master_password = keyring.get_password('password_manager', 'master_password')
-
-if not master_password:
-    # Saisie du mot de passe maître si non stocké
-    master_password = getpass.getpass('Entrez le mot de passe maître: ')
-
-    # Vérification du mot de passe maître
-    conn = sqlite3.connect('passwords.db')
-    c = conn.cursor()
-    c.execute("SELECT password_hash FROM master_password WHERE id = 1")
-    result = c.fetchone()
-    conn.close()
-
-    if result:
-        if not check_master_password(master_password, result[0]):
-            print("Mot de passe maître incorrect.")
-            exit()
-    else:
-        # Hache et stocke le mot de passe maître s'il n'existe pas
-        hashed = hash_master_password(master_password)
-        conn = sqlite3.connect('passwords.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO master_password (id, password_hash) VALUES (1, ?)", (hashed,))
-        conn.commit()
-        conn.close()
-    
-    # Stocker le mot de passe maître dans keyring pour la session
-    keyring.set_password('password_manager', 'master_password', master_password)
 
 # Exécution de l'action demandée
 if args.action == 'add':
-    password = getpass.getpass('Entrez le mot de passe à ajouter: ')
-    add_password(args.service, password)
-    print(f"Mot de passe pour le service '{args.service}' ajouté avec succès.")
-elif args.action == 'get':
-    password = get_password(args.service)
-    if password:
-        pyperclip.copy(password)
-        print(f"Mot de passe pour le service '{args.service}' copié dans le presse-papier.")
+    if args.username:
+        add_account(args.service, args.username)
     else:
-        print(f"Aucun mot de passe trouvé pour le service '{args.service}'.")
+        print("Erreur: L'identifiant (username) est requis pour ajouter un compte.")
+elif args.action == 'get':
+    if args.username is None:
+        get_accounts(args.service)
+    else:
+        password = get_password(args.service, args.username)
+        if password:
+            pyperclip.copy(password)
+            print(f"Mot de passe pour le service '{args.service}' et l'identifiant '{args.username}' copié dans le presse-papier.")
+        else:
+            print(f"Aucun mot de passe trouvé pour le service '{args.service}' et l'identifiant '{args.username}'.")
