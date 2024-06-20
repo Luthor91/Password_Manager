@@ -40,15 +40,8 @@ Assurez-vous que toutes les dépendances nécessaires sont correctement install�
 
     L'application demandera un mot de passe maître, ce mot de passe sera à renseigner une seule fois pour la session.
 
-  - Pour vérifier que la base de données est bien initialisé 
+  - Pour exécuter l'application
   ```python
-  python mdp.py initdb
+  python main.py
   ```
-  - Pour ajouter un mot de passe associé a un service
-  ```python
-  python mdp.py add <nom_du_service>
-  ```
-  - Pour récupérer un mot de passe associé a un service
-  ```python
-    python mdp.py get <nom_du_service>
-  ```
+
