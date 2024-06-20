@@ -3,6 +3,13 @@ import psutil
 
 # Fonction pour récupérer le nom du dernier logiciel exécuté
 def get_last_executed_application():
+    """
+    Récupère et retourne le nom du dernier logiciel exécuté.
+    Filtre les processus pour exclure ceux contenant "python" dans leur nom.
+
+    Returns:
+        str: Le nom du dernier processus exécuté ou un message d'erreur.
+    """
     try:
         # Récupérer la liste des processus en cours d'exécution
         process_list = []
@@ -29,6 +36,12 @@ def get_last_executed_application():
     except Exception as e:
         return f"Erreur: {str(e)}"
 
+# Fonction pour récupérer l'identifiant de l'utilisateur actuel
 def get_current_user_id():
-    return os.getlogin()
+    """
+    Récupère et retourne l'identifiant (nom d'utilisateur) de l'utilisateur actuel.
 
+    Returns:
+        str: L'identifiant de l'utilisateur actuel.
+    """
+    return os.getlogin()

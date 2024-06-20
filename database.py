@@ -16,9 +16,19 @@ import random
 
 # Connexion à la base de données
 def connect_db():
+    """
+    Établit une connexion à la base de données SQLite 'passwords.db'.
+    
+    Returns:
+        sqlite3.Connection: Objet de connexion à la base de données.
+    """
     return sqlite3.connect('passwords.db')
 
 def init_db():
+    """
+    Initialise la base de données en créant les tables nécessaires si elles n'existent pas.
+    Les tables créées sont 'services', 'accounts', et 'users'.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
 
@@ -48,6 +58,16 @@ def init_db():
     conn.close()
     
 def create_user(username, master_password_hash):
+    """
+    Crée un nouvel utilisateur avec un nom d'utilisateur et un mot de passe maître haché.
+    
+    Args:
+        username (str): Le nom d'utilisateur.
+        master_password_hash (str): Le hachage du mot de passe maître.
+    
+    Returns:
+        bool: True si l'utilisateur a été créé avec succès, False en cas de doublon.
+    """
     conn = connect_db()
     c = conn.cursor()
     try:
@@ -62,6 +82,13 @@ def create_user(username, master_password_hash):
     
 # Fonction pour ajouter un service
 def add_service(self):
+    """
+    Ajoute un nouveau service avec les informations d'utilisateur et de mot de passe.
+    Crypte le mot de passe avant de l'ajouter à la base de données.
+    
+    Args:
+        self: Référence à l'instance de la classe (utilisée dans les méthodes de classe).
+    """
     service = self.service_select.get()
     username = self.username_select.get()
     password = self.password_entry.get()
@@ -94,6 +121,15 @@ def add_service(self):
 
 # Fonction pour ajouter un compte (identifiant et mot de passe)
 def add_account(service, username, encrypted_password, user_id):
+    """
+    Ajoute un compte (service, nom d'utilisateur, mot de passe chiffré, ID utilisateur) à la base de données.
+    
+    Args:
+        service (str): Le nom du service.
+        username (str): Le nom d'utilisateur pour le service.
+        encrypted_password (str): Le mot de passe chiffré pour le service.
+        user_id (int): L'identifiant de l'utilisateur propriétaire du compte.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
 
@@ -119,6 +155,12 @@ def add_account(service, username, encrypted_password, user_id):
     
 # Fonction pour récupérer tous les services existants
 def get_all_services():
+    """
+    Récupère tous les noms de services existants de la base de données.
+    
+    Returns:
+        list: Liste des noms de services triés par ordre alphabétique.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
     c.execute("SELECT name FROM services ORDER BY name")
@@ -128,6 +170,15 @@ def get_all_services():
 
 # Fonction pour récupérer les identifiants pour un service donné
 def get_usernames_for_service(service):
+    """
+    Récupère tous les noms d'utilisateurs associés à un service donné.
+    
+    Args:
+        service (str): Le nom du service.
+    
+    Returns:
+        list: Liste des noms d'utilisateurs associés au service.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
     
@@ -145,6 +196,16 @@ def get_usernames_for_service(service):
 
 # Fonction pour récupérer le mot de passe pour un service et un identifiant donnés
 def get_password(service, username):
+    """
+    Récupère le mot de passe chiffré pour un service et un nom d'utilisateur donnés.
+    
+    Args:
+        service (str): Le nom du service.
+        username (str): Le nom d'utilisateur associé au service.
+    
+    Returns:
+        str: Le mot de passe chiffré ou None si aucun résultat n'est trouvé.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
     
@@ -165,6 +226,15 @@ def get_password(service, username):
 
 # Fonction pour récupérer un utilisateur par nom d'utilisateur
 def get_user_by_username(username):
+    """
+    Récupère les informations d'un utilisateur en fonction de son nom d'utilisateur.
+    
+    Args:
+        username (str): Le nom d'utilisateur à rechercher.
+    
+    Returns:
+        tuple: Les informations de l'utilisateur ou None si l'utilisateur n'est pas trouvé.
+    """
     conn = connect_db()
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE username=?", (username,))

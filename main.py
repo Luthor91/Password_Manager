@@ -2,7 +2,6 @@ import json
 import tkinter as tk
 from tkinter import Image, messagebox, ttk
 from PIL import Image, ImageTk
-
 import pyperclip
 import database as Database
 import passwords as Passwords
@@ -13,10 +12,16 @@ WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 400
 
 class PasswordManagerApp(tk.Tk):
+    """
+    Application de gestionnaire de mots de passe basée sur Tkinter.
+    """
     max_attempts = 3
     current_attempts = 0
 
     def __init__(self):
+        """
+        Initialise l'application, configure la fenêtre et charge l'image de fond.
+        """
         super().__init__()
         self.title("Password Manager")
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
@@ -34,6 +39,9 @@ class PasswordManagerApp(tk.Tk):
         self.start()
 
     def start(self):
+        """
+        Démarre l'application en vérifiant si l'utilisateur est enregistré et affiche l'écran approprié.
+        """
         # Vérifier si l'utilisateur est déjà enregistré
         current_username = Utilities.get_current_user_id()
         user = Database.get_user_by_username(current_username)
@@ -46,12 +54,17 @@ class PasswordManagerApp(tk.Tk):
             else:
                 self.show_error_message("Impossible de créer l'utilisateur. Veuillez réessayer.")
                 self.destroy()  # Fermer l'application en cas d'erreur de création
-
         else:
             # Afficher directement l'écran de connexion si l'utilisateur est déjà enregistré
             self.show_login_screen()
 
     def show_error_message(self, message):
+        """
+        Affiche un message d'erreur dans une nouvelle fenêtre.
+
+        Args:
+            message (str): Le message d'erreur à afficher.
+        """
         # Créer une fenêtre Toplevel pour afficher le message d'erreur
         error_window = tk.Toplevel(self)
         error_window.title("Erreur")
@@ -67,6 +80,12 @@ class PasswordManagerApp(tk.Tk):
         error_window.wait_window()
 
     def show_login_screen(self, master_password=None):
+        """
+        Affiche l'écran de connexion pour l'utilisateur.
+
+        Args:
+            master_password (str, optional): Le Master Password à afficher si disponible.
+        """
         self.destroy_widgets()
         
         # Créer un Canvas avec une image de fond
@@ -91,6 +110,11 @@ class PasswordManagerApp(tk.Tk):
             self.login_canvas.create_window(WINDOW_WIDTH//2, 190, window=self.master_password_display)
 
     def verify_master_password(self):
+        """
+        Vérifie le Master Password entré par l'utilisateur.
+        Si incorrect, affiche un message d'erreur et incrémente le compteur de tentatives.
+        Si correct, affiche l'interface principale.
+        """
         master_password = self.master_password_entry.get()
         if Passwords.verify_master_password(master_password):
             self.show_main_interface()
@@ -104,6 +128,9 @@ class PasswordManagerApp(tk.Tk):
                 self.destroy()  # Fermer l'application en cas de trop d'essais infructueux
 
     def show_main_interface(self):
+        """
+        Affiche l'interface principale de l'application après une connexion réussie.
+        """
         # Supprimer l'écran de connexion
         self.destroy_widgets()
 
@@ -146,22 +173,38 @@ class PasswordManagerApp(tk.Tk):
         copy_button = tk.Button(select_service_frame, text="Copier Mot de passe", command=self.copy_password)
         copy_button.grid(row=2, columnspan=2, pady=10)
 
-
-
     def destroy_widgets(self):
-        # Supprimer tous les widgets de la fenêtre principale
+        """
+        Supprime tous les widgets de la fenêtre principale.
+        """
         for widget in self.winfo_children():
             widget.destroy()
 
     def get_all_services(self):
+        """
+        Récupère tous les services disponibles depuis la base de données.
+
+        Returns:
+            list: Liste des services disponibles.
+        """
         return Database.get_all_services()
 
     def populate_username_select(self, event):
+        """
+        Remplit la combobox des noms d'utilisateurs en fonction du service sélectionné.
+
+        Args:
+            event (tk.Event): L'événement déclenché par la sélection de la combobox.
+        """
         selected_service = self.service_select.get()
         usernames = Database.get_usernames_for_service(selected_service)
         self.username_select['values'] = usernames
 
     def add_service(self):
+        """
+        Ajoute un nouveau service avec son identifiant et mot de passe après chiffrement.
+        Affiche un message de succès ou d'erreur selon le cas.
+        """
         service = self.service_entry.get()
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -197,6 +240,10 @@ class PasswordManagerApp(tk.Tk):
             messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
 
     def copy_password(self):
+        """
+        Copie le mot de passe déchiffré du service et utilisateur sélectionnés dans le presse-papiers.
+        Affiche un message de succès ou d'erreur selon le cas.
+        """
         selected_service = self.service_select.get()
         selected_username = self.username_select.get()
 
@@ -220,7 +267,6 @@ class PasswordManagerApp(tk.Tk):
                 messagebox.showerror("Erreur", "Impossible de récupérer le mot de passe.")
         else:
             messagebox.showerror("Erreur", "Veuillez sélectionner un service et un identifiant.")
-
 
 if __name__ == "__main__":
     app = PasswordManagerApp()

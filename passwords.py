@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import platform
 import random
 import sqlite3
 import string
@@ -10,59 +11,67 @@ from dotenv import find_dotenv, load_dotenv, set_key
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from base64 import b64encode, b64decode
-
-import base64
-import hashlib
-import json
-import os
+import wmi
 import stat
-import random
-import sqlite3
-import string
 import subprocess
 import database as Database
-import getpass
 import winreg
-
-from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
-from base64 import b64encode, b64decode
 
-# Charger les variables d'environnement depuis le fichier .env
-load_dotenv()
+def get_hardware_id():
+    """
+    Retourne un identifiant unique basé sur le matériel.
+    Utilise le numéro de série du disque dur sur Windows et l'adresse MAC sur Linux/macOS.
+    """
+    if platform.system() == "Windows":
+        # Utiliser le numéro de série du disque dur sur Windows
+        try:
+            c = wmi.WMI()
+            for disk in c.Win32_DiskDrive():
+                return disk.SerialNumber.strip()
+        except ImportError:
+            pass
+    elif platform.system() == "Linux":
+        # Utiliser l'adresse MAC sur Linux
+        try:
+            for line in os.popen("ifconfig"):
+                if "ether" in line:
+                    return line.split()[1].strip()
+        except Exception:
+            pass
+    elif platform.system() == "Darwin":
+        # Utiliser l'adresse MAC sur macOS
+        try:
+            for line in os.popen("ifconfig"):
+                if "ether" in line:
+                    return line.split()[1].strip()
+        except Exception:
+            pass
+    return "default_hardware_id"
 
-# Chemin vers le fichier .env
-dotenv_path = find_dotenv()
-
-# Créer le fichier .env s'il n'existe pas
-if not dotenv_path:
-    dotenv_path = '.env'
-    with open(dotenv_path, 'w') as f:
-        pass
-    
-# Définir les permissions du fichier .env à 600 (lecture/écriture pour le propriétaire uniquement)
-if os.path.exists(dotenv_path):
-    os.chmod(dotenv_path, stat.S_IRUSR | stat.S_IWUSR)
-
-# Définir PEPPER si elle n'est pas définie ou si elle est nulle dans le fichier .env ou dans les variables d'environnement
-pepper = os.environ.get("PEPPER")
-if not pepper:
-    pepper = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(16))
-    os.environ["PEPPER"] = pepper
-    # Mettre à jour le fichier .env seulement si le pepper n'est pas défini dans les variables d'environnement
-    set_key(dotenv_path, "PEPPER", pepper)
-    
 def get_salt():
+    """
+    Retourne un sel unique basé sur le nom d'utilisateur de l'ordinateur.
+    """
     return hashlib.sha256(os.getlogin().encode('utf-8')).hexdigest()[:16]
 
 def get_pepper():
-    return os.environ["PEPPER"]
+    """
+    Retourne un pepper unique basé sur l'identifiant matériel de l'ordinateur.
+    """
+    hardware_id = get_hardware_id()
+    return hashlib.sha256(hardware_id.encode('utf-8')).hexdigest()[:16]
 
 def generate_master_password():
+    """
+    Génère et retourne un mot de passe maître aléatoire de 12 caractères.
+    """
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(12))
 
 def get_master_password():
+    """
+    Récupère et retourne le hash du mot de passe maître stocké pour l'utilisateur actuel.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
 
@@ -79,6 +88,10 @@ def get_master_password():
     return None
 
 def create_user_with_master_password(username):
+    """
+    Crée un nouvel utilisateur avec un mot de passe maître.
+    Retourne le succès de la création et le mot de passe maître généré.
+    """
     master_password = generate_master_password()
     salt = get_salt()
     pepper = get_pepper()
@@ -90,8 +103,11 @@ def create_user_with_master_password(username):
     
     return success, master_password
 
-# Fonction pour chiffrer un mot de passe
 def encrypt_password(password):
+    """
+    Chiffre le mot de passe donné en utilisant AES en mode GCM.
+    Retourne les données chiffrées sous forme de chaîne JSON.
+    """
     salt = get_salt().encode('utf-8')
     pepper = get_pepper().encode('utf-8')
     master_password = get_master_password()
@@ -108,8 +124,11 @@ def encrypt_password(password):
 
     return json.dumps(encrypted_data)
 
-# Fonction pour déchiffrer un mot de passe
 def decrypt_password(encrypted_password):
+    """
+    Déchiffre le mot de passe chiffré donné.
+    Retourne le mot de passe en texte clair ou lève une erreur si le déchiffrement échoue.
+    """
     try:
         encrypted_data = json.loads(encrypted_password)
     except json.JSONDecodeError:
@@ -123,7 +142,6 @@ def decrypt_password(encrypted_password):
         pepper = get_pepper().encode('utf-8')
         master_password = get_master_password()
 
-        # Utilisation du salt et pepper stockés pour dériver la clé
         key = PBKDF2(master_password, salt + pepper, dkLen=32)
 
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
@@ -134,6 +152,10 @@ def decrypt_password(encrypted_password):
         raise ValueError("Erreur de déchiffrement : intégrité altérée ou mot de passe incorrect")
 
 def verify_master_password(master_password):
+    """
+    Vérifie le mot de passe maître donné en le comparant avec le hash stocké.
+    Retourne True si le mot de passe est correct, sinon False.
+    """
     conn = sqlite3.connect('passwords.db')
     c = conn.cursor()
     current_username = getpass.getuser()
