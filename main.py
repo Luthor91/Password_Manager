@@ -37,7 +37,7 @@ class PasswordManagerApp(tk.Tk):
         # Vérifier si l'utilisateur est déjà enregistré
         current_username = Utilities.get_current_user_id()
         user = Database.get_user_by_username(current_username)
-
+        
         if not user:
             success, master_password = Passwords.create_user_with_master_password(current_username)
             if success:
