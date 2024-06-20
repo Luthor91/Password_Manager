@@ -1,4 +1,6 @@
 import os
+import threading
+from tkinter import messagebox
 import psutil
 
 # Fonction pour récupérer le nom du dernier logiciel exécuté
@@ -45,3 +47,16 @@ def get_current_user_id():
         str: L'identifiant de l'utilisateur actuel.
     """
     return os.getlogin()
+
+def schedule_auto_shutdown(self):
+    """
+    Planifie la fermeture automatique de l'application après 15 minutes.
+    Affiche un message d'avertissement à l'utilisateur avant de fermer l'application.
+    """
+    def shutdown():
+        messagebox.showwarning("Inactivité", "L'application va se fermer en raison de l'inactivité.")
+        self.destroy()
+
+    # Démarrer un thread qui attend 15 minutes avant d'appeler la fonction shutdown
+    threading.Timer(15 * 60, shutdown).start()
+    

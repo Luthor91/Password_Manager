@@ -131,6 +131,9 @@ class PasswordManagerApp(tk.Tk):
         """
         Affiche l'interface principale de l'application après une connexion réussie.
         """
+        # Planifier la fermeture automatique après 15 minutes d'inactivité
+        Utilities.schedule_auto_shutdown()
+
         # Supprimer l'écran de connexion
         self.destroy_widgets()
 
