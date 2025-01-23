@@ -45,3 +45,5 @@ Assurez-vous que toutes les dépendances nécessaires sont correctement install�
   python main.py
   ```
 
+  - En cas d'oublie de mot de passe maitre, malheuresement faudra supprimer password.db, la feature de récupération / reset se fera plus tard 
+
