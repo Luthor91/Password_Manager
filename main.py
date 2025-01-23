@@ -265,11 +265,21 @@ class PasswordManagerApp(tk.Tk):
                 # Copier le mot de passe déchiffré dans le presse-papiers
                 pyperclip.copy(decrypted_password)
 
+                # Programmer l'effacement du presse-papiers après 30 secondes
+                self.root.after(30000, self.clear_clipboard)
+
                 messagebox.showinfo("Mot de passe copié", "Mot de passe copié dans le presse-papiers.")
             else:
                 messagebox.showerror("Erreur", "Impossible de récupérer le mot de passe.")
         else:
             messagebox.showerror("Erreur", "Veuillez sélectionner un service et un identifiant.")
+
+    def clear_clipboard(self):
+        """
+        Efface le contenu du presse-papiers.
+        """
+        pyperclip.copy("")  # Efface le contenu du presse-papiers
+        print("Le presse-papiers a été vidé.")
 
 if __name__ == "__main__":
     app = PasswordManagerApp()
